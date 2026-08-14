@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                String?
+  image               String?
+  email               String    @unique
+  phoneNumber         String?
+  password            String
+  role                String    @default("user")
+  otp                 String?
+  otpExpires          DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockoutUntil        DateTime?
+  isLocked            Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Service {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  kh_name        String
+  icon           String
+  description    String
+  kh_description String
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("services")
+}
+
+model Package {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  kh_name        String
+  price          String
+  description    String
+  kh_description String
+  features       String[]
+  kh_features    String[]
+  recommend      Boolean  @default(false)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("packages")
+}
+
+model TeamMember {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  kh_name        String?
+  role           String
+  kh_role        String?
+  bio            String?
+  kh_bio         String?
+  image          String?
+  portfolio_link String?
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("team_members")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model ContactMessage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String
+  message   String
+  status    String   @default("unread") // "unread", "read", "archived"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contact_messages")
+}
+
+model Project {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  content     String
+  image       String
+  link        String?
+  category    String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectRequest {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  email            String
+  phoneNumber      String?
+  businessName     String?
+  businessType     String?
+  websiteGoals     String?
+  pagesNeeded      String?
+  designPreference String?
+  competitors      String?
+  packageId        String?  @db.ObjectId
+  status           String   @default("pending") // "pending", "reviewed", "in_progress", "completed", "cancelled"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("project_requests")
+}
+
+model RefreshToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @db.ObjectId
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model RegistrationOtp {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  name         String
+  passwordHash String
+  otp          String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("registration_otps")
+}
+
+model BlockedIp {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  ip           String    @unique
+  reason       String
+  attackCount  Int       @default(1)
+  blockedUntil DateTime?
+  isPermanent  Boolean   @default(false)
+  blockedBy    String    @default("SYSTEM_ATTACK_SHIELD")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("blocked_ips")
+}
