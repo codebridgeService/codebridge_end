@@ -4,6 +4,14 @@ import { prisma } from '../lib/prisma';
 export const getAll = async (req: Request, res: Response) => {
   try {
     const items = await (prisma.user as any).findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(items);
@@ -16,7 +24,17 @@ export const getAll = async (req: Request, res: Response) => {
 export const getOne = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const item = await (prisma.user as any).findUnique({ where: { id } });
+    const item = await (prisma.user as any).findUnique({ 
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json(item);
   } catch (error) {
@@ -27,8 +45,14 @@ export const getOne = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   try {
+    const data = { ...req.body };
+    delete data.id;
+    delete data._id;
+    delete data.createdAt;
+    delete data.updatedAt;
+
     const item = await (prisma.user as any).create({
-      data: req.body,
+      data,
     });
     res.status(201).json(item);
   } catch (error) {
@@ -43,13 +67,28 @@ export const update = async (req: Request, res: Response) => {
 
     const existingUser = await (prisma.user as any).findUnique({ where: { id } });
     if (!existingUser) return res.status(404).json({ error: 'Not found' });
-    if (existingUser.role === 'admin') {
-      return res.status(403).json({ error: 'Cannot modify an admin user' });
+    if (existingUser.role === 'admin' && req.body.role && req.body.role !== 'admin') {
+      return res.status(403).json({ error: 'Cannot demote an admin user' });
     }
+
+    const data = { ...req.body };
+    delete data.id;
+    delete data._id;
+    delete data.createdAt;
+    delete data.updatedAt;
+    delete data.password;
 
     const item = await (prisma.user as any).update({
       where: { id },
-      data: req.body,
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     });
     res.json(item);
   } catch (error) {

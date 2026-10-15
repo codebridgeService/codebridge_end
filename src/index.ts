@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: 'codebridge_backend.env' });
+
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,7 +18,12 @@ import projectsRoutes from './routes/projects.routes';
 import projectRequestsRoutes from './routes/projectRequests.routes';
 import contactRoutes from './routes/contact.routes';
 import adminRoutes from './routes/admin.routes';
+import siteSettingsRoutes from './routes/siteSettings.routes';
+import faqRoutes from './routes/faq.routes';
+import workStepsRoutes from './routes/workSteps.routes';
+import securityFeaturesRoutes from './routes/securityFeatures.routes';
 import { setupSwagger } from './lib/swagger';
+
 
 const app: Express = express();
 const port = process.env.PORT || 5000;
@@ -63,6 +71,11 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/project-requests', projectRequestsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/site-settings', siteSettingsRoutes);
+app.use('/api/faqs', faqRoutes);
+app.use('/api/work-steps', workStepsRoutes);
+app.use('/api/security-features', securityFeaturesRoutes);
+
 
 // Centralized defensive error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

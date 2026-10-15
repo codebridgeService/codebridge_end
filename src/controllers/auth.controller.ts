@@ -86,243 +86,27 @@ const clearRefreshTokenCookie = (res: Response) => {
  * and emails OTP to user. USER IS NOT CREATED IN DATABASE UNTIL OTP IS VERIFIED.
  */
 export const register = async (req: Request, res: Response) => {
-  const clientIp = getClientIP(req);
-  try {
-    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-    const email = normalizeEmail(req.body?.email);
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-    const providedOtp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        error: 'Name, email and password are required',
-      });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        error: 'Password must be at least 8 characters long',
-      });
-    }
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
-    }
-
-    // If caller provided an OTP in the register call directly, verify it immediately
-    if (providedOtp) {
-      const pendingOtp = await prisma.registrationOtp.findUnique({
-        where: { email },
-      });
-
-      if (!pendingOtp || pendingOtp.otp !== providedOtp) {
-        recordFailedAttempt(clientIp, 'Invalid registration OTP code');
-        return res.status(401).json({ error: 'Invalid verification code. Cannot register account without valid OTP.' });
-      }
-
-      if (pendingOtp.expiresAt.getTime() <= Date.now()) {
-        await prisma.registrationOtp.delete({ where: { email } }).catch(() => undefined);
-        return res.status(401).json({ error: 'Verification code has expired. Please request a new code.' });
-      }
-
-      // Valid OTP: Create user
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const newUser = await prisma.user.create({
-        data: {
-          name,
-          email,
-          password: hashedPassword,
-          role: 'user',
-        },
-      });
-
-      await prisma.registrationOtp.delete({ where: { email } }).catch(() => undefined);
-
-      const { token, refreshToken } = await issueTokens(newUser);
-      setRefreshTokenCookie(res, refreshToken);
-
-      const { password: _password, otp: _otp, otpExpires: _otpExpires, ...safeUser } = newUser;
-      return res.status(201).json({
-        message: 'Account registered successfully',
-        token,
-        refreshToken,
-        user: safeUser,
-      });
-    }
-
-    // Standard Registration Flow: Generate OTP and send email
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const otp = randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + OTP_MAX_AGE_MS);
-
-    // Upsert pending registration record
-    await prisma.registrationOtp.upsert({
-      where: { email },
-      update: {
-        name,
-        passwordHash: hashedPassword,
-        otp,
-        expiresAt,
-      },
-      create: {
-        email,
-        name,
-        passwordHash: hashedPassword,
-        otp,
-        expiresAt,
-      },
-    });
-
-    try {
-      await sendOTPEmail(email, otp);
-    } catch (mailError) {
-      console.error('Failed to send registration OTP email:', mailError);
-      return res.status(500).json({
-        error: 'Failed to send verification code email. Please try again.',
-      });
-    }
-
-    return res.status(200).json({
-      message: 'Verification code sent to your email. Please enter the OTP to complete registration.',
-      requiresOTP: true,
-      email,
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    return res.status(500).json({ error: 'Failed to process registration' });
-  }
+  return res.status(403).json({
+    error: 'Public account registration is disabled. CodeBridges operates in direct agency consultation mode. Please contact us via the contact form.',
+  });
 };
 
 /**
  * Step 2 of Registration: Verify Registration OTP & Finalize Account Creation.
  */
 export const verifyRegisterOTP = async (req: Request, res: Response) => {
-  const clientIp = getClientIP(req);
-  try {
-    const email = normalizeEmail(req.body?.email);
-    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-
-    if (!email || !otp) {
-      return res.status(400).json({ error: 'Email and OTP code are required' });
-    }
-
-    const pending = await prisma.registrationOtp.findUnique({
-      where: { email },
-    });
-
-    if (!pending) {
-      return res.status(404).json({
-        error: 'No pending registration found for this email. Please sign up first.',
-      });
-    }
-
-    if (pending.otp !== otp) {
-      recordFailedAttempt(clientIp, 'Invalid registration OTP attempt');
-      return res.status(401).json({
-        error: 'Invalid verification code. Cannot register account without OTP.',
-      });
-    }
-
-    if (pending.expiresAt.getTime() <= Date.now()) {
-      await prisma.registrationOtp.delete({ where: { email } }).catch(() => undefined);
-      return res.status(401).json({
-        error: 'Verification code has expired. Please request a new code.',
-      });
-    }
-
-    // Check if user somehow was already created in the meantime
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      await prisma.registrationOtp.delete({ where: { email } }).catch(() => undefined);
-      return res.status(409).json({ error: 'User already exists. Please log in.' });
-    }
-
-    // Create the confirmed user account in the database
-    const user = await prisma.user.create({
-      data: {
-        name: pending.name,
-        email: pending.email,
-        password: pending.passwordHash,
-        role: 'user',
-      },
-    });
-
-    // Delete the pending OTP record
-    await prisma.registrationOtp.delete({ where: { email } }).catch(() => undefined);
-
-    recordSuccessfulAuth(clientIp);
-
-    const { token, refreshToken } = await issueTokens(user);
-    setRefreshTokenCookie(res, refreshToken);
-
-    const { password: _password, otp: _otp, otpExpires: _otpExpires, ...safeUser } = user;
-
-    return res.status(201).json({
-      message: 'Account registered and verified successfully',
-      token,
-      refreshToken,
-      user: safeUser,
-    });
-  } catch (error) {
-    console.error('Registration OTP verification error:', error);
-    return res.status(500).json({ error: 'Failed to verify registration code' });
-  }
+  return res.status(403).json({
+    error: 'Public account registration is disabled.',
+  });
 };
 
 /**
  * Resend OTP for pending registration.
  */
 export const resendRegisterOTP = async (req: Request, res: Response) => {
-  try {
-    const email = normalizeEmail(req.body?.email);
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
-
-    const pending = await prisma.registrationOtp.findUnique({
-      where: { email },
-    });
-
-    if (!pending) {
-      const existingUser = await prisma.user.findUnique({ where: { email } });
-      if (existingUser) {
-        return res.status(409).json({ error: 'Account already registered. Please log in.' });
-      }
-      return res.status(404).json({ error: 'No pending registration found for this email.' });
-    }
-
-    const otp = randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + OTP_MAX_AGE_MS);
-
-    await prisma.registrationOtp.update({
-      where: { email },
-      data: {
-        otp,
-        expiresAt,
-      },
-    });
-
-    try {
-      await sendOTPEmail(email, otp);
-    } catch (mailError) {
-      console.error('Failed to resend registration OTP email:', mailError);
-      return res.status(500).json({
-        error: 'Failed to send verification code. Please try again.',
-      });
-    }
-
-    return res.json({
-      message: 'Verification code resent successfully',
-      email,
-    });
-  } catch (error) {
-    console.error('Resend registration OTP error:', error);
-    return res.status(500).json({ error: 'Failed to resend verification code' });
-  }
+  return res.status(403).json({
+    error: 'Public account registration is disabled.',
+  });
 };
 
 /**

@@ -4,7 +4,7 @@ import { uploadToCloudinary } from '../lib/cloudinary';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
-    const items = await (prisma.teamMember as any).findMany({
+    const items = await prisma.teamMember.findMany({
       orderBy: [
         { order: 'asc' },
         { createdAt: 'desc' }
@@ -20,7 +20,7 @@ export const getAll = async (req: Request, res: Response) => {
 export const getOne = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const item = await (prisma.teamMember as any).findUnique({ where: { id } });
+    const item = await prisma.teamMember.findUnique({ where: { id: id as string } });
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json(item);
   } catch (error) {
@@ -32,7 +32,10 @@ export const getOne = async (req: Request, res: Response) => {
 export const create = async (req: Request, res: Response) => {
   try {
     const data = { ...req.body };
+    delete data.id;
+    delete (data as any)._id;
     if (data.order !== undefined) data.order = parseInt(data.order, 10);
+    if (data.isActive !== undefined) data.isActive = data.isActive === 'true' || data.isActive === true;
 
     if (req.file) {
       const base64 = req.file.buffer.toString('base64');
@@ -40,7 +43,7 @@ export const create = async (req: Request, res: Response) => {
       data.image = uploadRes.url;
     }
 
-    const item = await (prisma.teamMember as any).create({
+    const item = await prisma.teamMember.create({
       data,
     });
     res.status(201).json(item);
@@ -53,18 +56,31 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const data = { ...req.body };
-    if (data.order !== undefined) data.order = parseInt(data.order, 10);
+    const body = { ...req.body };
+
+    const updateData: any = {};
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.kh_name !== undefined) updateData.kh_name = body.kh_name;
+    if (body.role !== undefined) updateData.role = body.role;
+    if (body.kh_role !== undefined) updateData.kh_role = body.kh_role;
+    if (body.bio !== undefined) updateData.bio = body.bio;
+    if (body.kh_bio !== undefined) updateData.kh_bio = body.kh_bio;
+    if (body.portfolio_link !== undefined) updateData.portfolio_link = body.portfolio_link;
+    if (body.order !== undefined) updateData.order = parseInt(body.order, 10);
+    if (body.isActive !== undefined) {
+      updateData.isActive = body.isActive === 'true' || body.isActive === true;
+    }
+    if (body.image !== undefined) updateData.image = body.image;
 
     if (req.file) {
       const base64 = req.file.buffer.toString('base64');
       const uploadRes = await uploadToCloudinary(base64, 'team');
-      data.image = uploadRes.url;
+      updateData.image = uploadRes.url;
     }
 
-    const item = await (prisma.teamMember as any).update({
-      where: { id },
-      data,
+    const item = await prisma.teamMember.update({
+      where: { id: id as string },
+      data: updateData,
     });
     res.json(item);
   } catch (error) {
@@ -76,7 +92,7 @@ export const update = async (req: Request, res: Response) => {
 export const remove = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await (prisma.teamMember as any).delete({ where: { id } });
+    await prisma.teamMember.delete({ where: { id: id as string } });
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
     console.error('Error deleting teamMembers:', error);
@@ -96,7 +112,7 @@ export const reorderTeamMembers = async (req: Request, res: Response) => {
     // Bulk update orders
     await Promise.all(
       orders.map((o: any) =>
-        (prisma.teamMember as any).update({
+        prisma.teamMember.update({
           where: { id: o.id },
           data: { order: o.order }
         })

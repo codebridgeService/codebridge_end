@@ -3,7 +3,12 @@ import { prisma } from '../lib/prisma';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
+    const where: any = {};
+    if (req.query.active === 'true') {
+      where.isActive = true;
+    }
     const items = await (prisma.service as any).findMany({
+      where,
       orderBy: [
         { order: 'asc' },
         { createdAt: 'desc' }
@@ -23,19 +28,32 @@ export const getOne = async (req: Request, res: Response) => {
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json(item);
   } catch (error) {
-    console.error('Error fetching services:', error);
+    console.error('Error fetching service:', error);
     res.status(500).json({ error: 'Failed to fetch' });
   }
 };
 
 export const create = async (req: Request, res: Response) => {
   try {
+    const data = { ...req.body };
+    delete data.id;
+    delete data._id;
+    delete data.createdAt;
+    delete data.updatedAt;
+
+    if (data.isActive !== undefined) {
+      data.isActive = data.isActive === 'true' || data.isActive === true;
+    }
+    if (data.order !== undefined) {
+      data.order = Number(data.order) || 0;
+    }
+
     const item = await (prisma.service as any).create({
-      data: req.body,
+      data,
     });
     res.status(201).json(item);
   } catch (error) {
-    console.error('Error creating services:', error);
+    console.error('Error creating service:', error);
     res.status(500).json({ error: 'Failed to create' });
   }
 };
@@ -43,13 +61,26 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const data = { ...req.body };
+    delete data.id;
+    delete data._id;
+    delete data.createdAt;
+    delete data.updatedAt;
+
+    if (data.isActive !== undefined) {
+      data.isActive = data.isActive === 'true' || data.isActive === true;
+    }
+    if (data.order !== undefined) {
+      data.order = Number(data.order) || 0;
+    }
+
     const item = await (prisma.service as any).update({
       where: { id },
-      data: req.body,
+      data,
     });
     res.json(item);
   } catch (error) {
-    console.error('Error updating services:', error);
+    console.error('Error updating service:', error);
     res.status(500).json({ error: 'Failed to update' });
   }
 };
@@ -60,7 +91,7 @@ export const remove = async (req: Request, res: Response) => {
     await (prisma.service as any).delete({ where: { id } });
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    console.error('Error deleting services:', error);
+    console.error('Error deleting service:', error);
     res.status(500).json({ error: 'Failed to delete' });
   }
 };

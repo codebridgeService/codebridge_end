@@ -36,6 +36,7 @@ model Service {
   description    String
   kh_description String
   order          Int      @default(0)
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -53,6 +54,7 @@ model Package {
   kh_features    String[]
   recommend      Boolean  @default(false)
   order          Int      @default(0)
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -70,6 +72,7 @@ model TeamMember {
   image          String?
   portfolio_link String?
   order          Int      @default(0)
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -107,6 +110,7 @@ model Project {
   link        String?
   category    String
   order       Int      @default(0)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -169,3 +173,114 @@ model BlockedIp {
 
   @@map("blocked_ips")
 }
+
+model SiteSetting {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  // Company Contact & Socials
+  phone          String   @default("+855 12 345 678")
+  email          String   @default("codebridge2026@gmail.com")
+  address        String   @default("Phnom Penh, Cambodia")
+  addressKh      String   @default("រាជធានីភ្នំពេញ ប្រទេសកម្ពុជា")
+  workingHours   String   @default("Mon - Sat: 8:00 AM - 6:00 PM")
+  workingHoursKh String   @default("ច័ន្ទ - សៅរ៍: ៨:០០ ព្រឹក - ៦:០០ ល្ងាច")
+  facebookUrl    String?  @default("https://facebook.com")
+  telegramUrl    String?  @default("https://t.me")
+  tiktokUrl      String?  @default("https://tiktok.com")
+  instagramUrl   String?  @default("https://instagram.com")
+  
+  // Hero Section
+  heroBadge      String   @default("Bridging Businesses with Modern Technology")
+  heroBadgeKh    String   @default("យើងកំពុងតភ្ជាប់អាជីវកម្មជាមួយបច្ចេកវិទ្យា")
+  heroTitle      String   @default("We Build Digital Solutions That Grow Your Business")
+  heroTitleKh    String   @default("យើងកសាងដំណោះស្រាយឌីជីថលដែលជួយពង្រីកអាជីវកម្មរបស់អ្នក")
+  heroSubtitle   String   @default("Modern websites, cross-platform apps, and enterprise systems tailored to your needs.")
+  heroSubtitleKh String   @default("គេហទំព័រទំនើប កម្មវិធីទូរស័ព្ទ និងប្រព័ន្ធគ្រប់គ្រងសហគ្រាសតាមតម្រូវការរបស់អ្នក។")
+  heroCtaText    String   @default("Explore Services")
+  heroCtaTextKh  String   @default("ស្វែងយល់សេវាកម្ម")
+  heroCtaLink    String   @default("/services")
+
+  // Call-To-Action (CTA) Section
+  ctaTitle       String   @default("Ready to Transform Your Business?")
+  ctaTitleKh     String   @default("ត្រៀមខ្លួនរួចរាល់ដើម្បីផ្លាស់ប្តូរអាជីវកម្មរបស់អ្នកហើយឬនៅ?")
+  ctaSubtitle    String   @default("Let's build your next digital platform together.")
+  ctaSubtitleKh  String   @default("តោះសហការកសាងប្រព័ន្ធឌីជីថលរបស់អ្នកជាមួយយើង។")
+  ctaBtnText     String   @default("Start Project")
+  ctaBtnTextKh   String   @default("ចាប់ផ្តើមគម្រោង")
+  ctaBtnLink     String   @default("/contact")
+
+  // About Page (Mission, Vision, Goals)
+  aboutStory     String   @default("We are a dedicated team of innovators and problem-solvers, passionate about building meaningful digital products that empower startups and small businesses. Our focus is on delivering speed, reliability, and exceptionally clean design.")
+  aboutStoryKh   String   @default("យើងគឺជាក្រុមអ្នកច្នៃប្រឌិត និងអ្នកដោះស្រាយបញ្ហា ដែលមានចំណង់ចំណូលចិត្តក្នុងការបង្កើតផលិតផលឌីជីថលលំដាប់ខ្ពស់ ដើម្បីជួយដល់អាជីវកម្មថ្មីថ្មោង និងខ្នាតតូច។ ការយកចិត្តទុកដាក់របស់យើងគឺលើការផ្តល់ជូននូវល្បឿន ភាពជឿជាក់ និងការរចនាដ៏ស្រស់ស្អាតបំផុត។")
+  missionTitle   String   @default("Our Mission")
+  missionTitleKh String   @default("បេសកកម្មរបស់យើង")
+  missionText    String   @default("To empower local and international businesses with scalable, high-performance software and exceptional digital experiences.")
+  missionTextKh  String   @default("ដើម្បីផ្តល់អំណាចដល់អាជីវកម្មក្នុងស្រុក និងអន្តរជាតិ ជាមួយនឹងសូហ្វវែរដែលមានដំណើរការខ្ពស់ និងបទពិសោធន៍ឌីជីថលដ៏អស្ចារ្យ។")
+  visionTitle    String   @default("Our Vision")
+  visionTitleKh  String   @default("ចក្ខុវិស័យរបស់យើង")
+  visionText     String   @default("To become the leading digital engineering agency in Southeast Asia, pioneering transformative technology for growing businesses.")
+  visionTextKh   String   @default("ក្លាយជាក្រុមហ៊ុនវិស្វកម្មឌីជីថលឈានមុខគេនៅអាស៊ីអាគ្នេយ៍ ដោយត្រួសត្រាយបច្ចេកវិទ្យាផ្លាស់ប្តូរសម្រាប់អាជីវកម្មដែលកំពុងរីកចម្រើន។")
+
+  // Section Visibility Toggles (Homepage & Site-wide)
+  showHero       Boolean  @default(true)
+  showServices   Boolean  @default(true)
+  showPackages   Boolean  @default(true)
+  showProjects   Boolean  @default(true)
+  showSecurity   Boolean  @default(true)
+  showFaq        Boolean  @default(true)
+  showTeam       Boolean  @default(true)
+  showHowWeWork  Boolean  @default(true)
+  showCta        Boolean  @default(true)
+
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@map("site_settings")
+}
+
+model Faq {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  question    String
+  questionKh  String
+  answer      String
+  answerKh    String
+  category    String   @default("General")
+  categoryKh  String   @default("ទូទៅ")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("faqs")
+}
+
+model WorkStep {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  stepNumber    String
+  title         String
+  titleKh       String
+  description   String
+  descriptionKh String
+  order         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("work_steps")
+}
+
+model SecurityFeature {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  titleKh       String
+  description   String
+  descriptionKh String
+  icon          String   @default("ShieldCheckIcon")
+  color         String   @default("#3B82F6")
+  order         Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("security_features")
+}
+

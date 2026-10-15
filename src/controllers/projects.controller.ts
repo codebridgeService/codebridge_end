@@ -4,7 +4,13 @@ import { uploadToCloudinary } from '../lib/cloudinary';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
+    const { active } = req.query;
+    const where: any = {};
+    if (active === 'true') {
+      where.isActive = true;
+    }
     const items = await prisma.project.findMany({
+      where,
       orderBy: [
         { order: 'asc' },
         { createdAt: 'desc' }
@@ -32,11 +38,18 @@ export const getOne = async (req: Request, res: Response) => {
 export const create = async (req: Request, res: Response) => {
   try {
     const data = { ...req.body };
+    delete data.id;
+    delete (data as any)._id;
+
     if (data.order !== undefined) {
       const parsed = parseInt(data.order, 10);
       data.order = isNaN(parsed) ? 0 : parsed;
     } else {
       data.order = 0;
+    }
+
+    if (data.isActive !== undefined) {
+      data.isActive = data.isActive === 'true' || data.isActive === true;
     }
 
     if (req.file) {
@@ -62,28 +75,37 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
-    const data = { ...req.body };
-    if (data.order !== undefined) {
-      const parsed = parseInt(data.order, 10);
-      data.order = isNaN(parsed) ? 0 : parsed;
+    const body = { ...req.body };
+
+    const updateData: any = {};
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.content !== undefined) updateData.content = body.content;
+    if (body.link !== undefined) updateData.link = body.link;
+    if (body.category !== undefined) updateData.category = body.category;
+
+    if (body.order !== undefined) {
+      const parsed = parseInt(body.order, 10);
+      updateData.order = isNaN(parsed) ? 0 : parsed;
+    }
+
+    if (body.isActive !== undefined) {
+      updateData.isActive = body.isActive === 'true' || body.isActive === true;
+    }
+
+    if (body.image !== undefined) {
+      updateData.image = body.image;
     }
 
     if (req.file) {
       const base64 = req.file.buffer.toString('base64');
       const uploadRes = await uploadToCloudinary(base64, 'projects');
-      data.image = uploadRes.url;
+      updateData.image = uploadRes.url;
     }
-
-    // Remove undefined fields so they do not cause Prisma issues
-    Object.keys(data).forEach((key) => {
-      if (data[key] === undefined) {
-        delete data[key];
-      }
-    });
 
     const item = await prisma.project.update({
       where: { id },
-      data,
+      data: updateData,
     });
     res.json(item);
   } catch (error: any) {
