@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getAll, getOne, create, update, remove, reorderProjects } from '../controllers/projects.controller';
 import { verifyToken, requireAdmin } from '../middleware/auth.middleware';
 import { upload } from '../middleware/upload.middleware';
+import { validateObjectId } from '../middleware/validateId.middleware';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.post('/reorder', verifyToken, requireAdmin, reorderProjects);
  *       200:
  *         description: Project details
  */
-router.get('/:id', getOne);
+router.get('/:id', validateObjectId(), getOne);
 
 /**
  * @swagger
@@ -93,7 +94,7 @@ router.post('/', verifyToken, requireAdmin, upload.single('image'), create);
  *       200:
  *         description: Updated successfully
  */
-router.put('/:id', verifyToken, requireAdmin, upload.single('image'), update);
+router.put('/:id', verifyToken, requireAdmin, validateObjectId(), upload.single('image'), update);
 
 /**
  * @swagger
@@ -113,7 +114,7 @@ router.put('/:id', verifyToken, requireAdmin, upload.single('image'), update);
  *       200:
  *         description: Deleted successfully
  */
-router.delete('/:id', verifyToken, requireAdmin, remove);
+router.delete('/:id', verifyToken, requireAdmin, validateObjectId(), remove);
 
 export default router;
 

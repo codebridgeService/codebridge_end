@@ -92,3 +92,39 @@ export const otpLimiter = rateLimit({
     });
   },
 });
+
+// Dedicated Public Contact Form Rate Limiter (Prevents email flooding & spam)
+export const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProduction ? 5 : 20, // 5 submissions per 15 minutes per IP in production
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+  handler: (req, res) => {
+    const ip = getClientIP(req);
+    recordFailedAttempt(ip, 'Contact form submission rate limit exceeded');
+    res.status(429).json({
+      status: 'error',
+      code: 'CONTACT_RATE_LIMIT_EXCEEDED',
+      message: 'Too many messages submitted from this IP. Please wait 15 minutes before submitting again.',
+    });
+  },
+});
+
+// Dedicated Public Quote / Project Request Limiter
+export const quoteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProduction ? 5 : 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+  handler: (req, res) => {
+    const ip = getClientIP(req);
+    recordFailedAttempt(ip, 'Project request rate limit exceeded');
+    res.status(429).json({
+      status: 'error',
+      code: 'QUOTE_RATE_LIMIT_EXCEEDED',
+      message: 'Too many project requests submitted. Please wait 15 minutes before submitting again.',
+    });
+  },
+});

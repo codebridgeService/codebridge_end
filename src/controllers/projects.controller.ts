@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { uploadToCloudinary } from '../lib/cloudinary';
+import { encryptUrlToken } from '../lib/urlCipher';
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -16,7 +17,11 @@ export const getAll = async (req: Request, res: Response) => {
         { createdAt: 'desc' }
       ]
     });
-    res.json(items);
+    const mapped = items.map((p) => ({
+      ...p,
+      encryptedId: encryptUrlToken(p.id),
+    }));
+    res.json(mapped);
   } catch (error: any) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch projects', message: error.message || 'Failed to fetch projects' });
@@ -28,7 +33,10 @@ export const getOne = async (req: Request, res: Response) => {
     const id = String(req.params.id);
     const item = await prisma.project.findUnique({ where: { id } });
     if (!item) return res.status(404).json({ error: 'Not found', message: 'Project not found' });
-    res.json(item);
+    res.json({
+      ...item,
+      encryptedId: encryptUrlToken(item.id),
+    });
   } catch (error: any) {
     console.error('Error fetching project:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch project', message: error.message || 'Failed to fetch project' });

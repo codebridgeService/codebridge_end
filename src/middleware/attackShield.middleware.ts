@@ -54,6 +54,20 @@ export const getClientIP = (req: Request): string => {
   return normalizeIP(req.ip || req.socket?.remoteAddress);
 };
 
+export const getWhitelistedIPs = (): string[] => {
+  const raw = process.env.ADMIN_WHITELIST_IPS || '';
+  return raw
+    .split(',')
+    .map((ip) => normalizeIP(ip))
+    .filter(Boolean);
+};
+
+export const isWhitelistedIP = (ip: string): boolean => {
+  const clean = normalizeIP(ip);
+  if (clean === '127.0.0.1') return true;
+  return getWhitelistedIPs().includes(clean);
+};
+
 const logInfo = (...args: any[]) => {
   if (process.env.NODE_ENV !== 'test') {
     console.log(...args);
@@ -117,6 +131,10 @@ export const blockIP = (
   isPermanent: boolean = false
 ): void => {
   const cleanIp = normalizeIP(ip);
+  if (isWhitelistedIP(cleanIp)) {
+    logInfo(`🛡️ [ATTACK SHIELD] Skipping block for whitelisted admin IP: ${cleanIp}`);
+    return;
+  }
   const existing = blockedIPs.get(cleanIp);
   const attackCount = (existing?.attackCount || 0) + 1;
   const blockedUntilTime = isPermanent || durationMs === null ? null : Date.now() + durationMs;
@@ -333,6 +351,11 @@ setInterval(() => {
 export const attackShield = (req: Request, res: Response, next: NextFunction): void => {
   const ip = getClientIP(req);
   const now = Date.now();
+
+  // Whitelisted Admin IPs are immune to automated shield drop/bans
+  if (isWhitelistedIP(ip)) {
+    return next();
+  }
 
   // Step 1: Check active blocklist
   const blockEntry = blockedIPs.get(ip);

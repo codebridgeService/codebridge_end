@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { getAll, getOne, create, update, remove, reorder } from '../controllers/faq.controller';
 import { verifyToken, requireAdmin } from '../middleware/auth.middleware';
+import { validateObjectId } from '../middleware/validateId.middleware';
 
 const router = Router();
 
 router.get('/', getAll);
-router.get('/:id', getOne);
+router.get('/:id', validateObjectId(), getOne);
 router.post('/', verifyToken, requireAdmin, create);
-router.put('/:id', verifyToken, requireAdmin, update);
-router.delete('/:id', verifyToken, requireAdmin, remove);
+router.put('/:id', verifyToken, requireAdmin, validateObjectId(), update);
+router.delete('/:id', verifyToken, requireAdmin, validateObjectId(), remove);
 router.post('/reorder', verifyToken, requireAdmin, reorder);
 
 export default router;

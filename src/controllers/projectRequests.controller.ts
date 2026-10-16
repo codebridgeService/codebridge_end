@@ -53,8 +53,41 @@ export const getOne = async (req: AuthRequest, res: Response) => {
 
 export const create = async (req: AuthRequest, res: Response) => {
   try {
+    const {
+      name,
+      email,
+      phoneNumber,
+      businessName,
+      businessType,
+      websiteGoals,
+      pagesNeeded,
+      designPreference,
+      competitors,
+      packageId,
+    } = req.body;
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
     const item = await (prisma.projectRequest as any).create({
-      data: req.body,
+      data: {
+        name: name.trim().slice(0, 100),
+        email: email.trim().toLowerCase().slice(0, 150),
+        phoneNumber: typeof phoneNumber === 'string' ? phoneNumber.trim().slice(0, 50) : null,
+        businessName: typeof businessName === 'string' ? businessName.trim().slice(0, 150) : null,
+        businessType: typeof businessType === 'string' ? businessType.trim().slice(0, 100) : null,
+        websiteGoals: typeof websiteGoals === 'string' ? websiteGoals.trim().slice(0, 1000) : null,
+        pagesNeeded: typeof pagesNeeded === 'string' ? pagesNeeded.trim().slice(0, 500) : null,
+        designPreference: typeof designPreference === 'string' ? designPreference.trim().slice(0, 500) : null,
+        competitors: typeof competitors === 'string' ? competitors.trim().slice(0, 500) : null,
+        packageId: typeof packageId === 'string' && packageId.length === 24 ? packageId : null,
+        status: 'pending', // Always lock to pending on initial public creation
+      },
     });
     res.status(201).json(item);
   } catch (error) {
@@ -66,9 +99,15 @@ export const create = async (req: AuthRequest, res: Response) => {
 export const update = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const data = { ...req.body };
+    delete data.id;
+    delete data._id;
+    delete data.createdAt;
+    delete data.updatedAt;
+
     const item = await (prisma.projectRequest as any).update({
       where: { id },
-      data: req.body,
+      data,
     });
     res.json(item);
   } catch (error) {

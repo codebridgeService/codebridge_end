@@ -31,20 +31,38 @@ const port = process.env.PORT || 5000;
 // Trust reverse proxy (Render / Vercel / Cloudflare load balancers)
 app.set('trust proxy', 1);
 
-// Security HTTP headers
-app.use(helmet());
+// Security HTTP headers with HTTP Strict Transport Security (HSTS)
+app.use(helmet({
+  hsts: {
+    maxAge: 31536000, // 1 year in seconds
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+
+// Enforce encrypted HTTPS connections in production
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.hostname}${req.originalUrl}`);
+  }
+  next();
+});
 
 // Cookie parser
 app.use(cookieParser());
 
-// CORS configuration
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',').map(o => o.trim());
+// Strict CORS configuration
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow configured origins
+      callback(new Error(`Access blocked by CORS policy: Origin ${origin} is not allowed`));
     }
   },
   credentials: true,

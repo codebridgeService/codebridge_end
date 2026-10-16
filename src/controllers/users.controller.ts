@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 
 export const getAll = async (req: Request, res: Response) => {
@@ -45,19 +46,42 @@ export const getOne = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   try {
-    const data = { ...req.body };
-    delete data.id;
-    delete data._id;
-    delete data.createdAt;
-    delete data.updatedAt;
+    const { name, email, password, role } = req.body;
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
 
+    const existingUser = await (prisma.user as any).findUnique({
+      where: { email: email.trim().toLowerCase() },
+    });
+    if (existingUser) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
     const item = await (prisma.user as any).create({
-      data,
+      data: {
+        name: typeof name === 'string' ? name.trim().slice(0, 100) : '',
+        email: email.trim().toLowerCase().slice(0, 150),
+        password: hashedPassword,
+        role: role === 'admin' ? 'admin' : 'user',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     res.status(201).json(item);
   } catch (error) {
-    console.error('Error creating users:', error);
-    res.status(500).json({ error: 'Failed to create' });
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
   }
 };
 
@@ -76,7 +100,12 @@ export const update = async (req: Request, res: Response) => {
     delete data._id;
     delete data.createdAt;
     delete data.updatedAt;
-    delete data.password;
+
+    if (typeof req.body.password === 'string' && req.body.password.length >= 8) {
+      data.password = await bcrypt.hash(req.body.password, 12);
+    } else {
+      delete data.password;
+    }
 
     const item = await (prisma.user as any).update({
       where: { id },

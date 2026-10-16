@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getAll, getOne, create, update, remove } from '../controllers/teamMembers.controller';
 import { verifyToken, requireAdmin } from '../middleware/auth.middleware';
 import { upload } from '../middleware/upload.middleware';
+import { validateObjectId } from '../middleware/validateId.middleware';
 
 const router = Router();
 
@@ -40,7 +41,7 @@ router.get('/', getAll);
  *       200:
  *         description: Team member details
  */
-router.get('/:id', getOne);
+router.get('/:id', validateObjectId(), getOne);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.post('/', verifyToken, requireAdmin, upload.single('image'), create);
  *       200:
  *         description: Updated successfully
  */
-router.put('/:id', verifyToken, requireAdmin, upload.single('image'), update);
+router.put('/:id', verifyToken, requireAdmin, validateObjectId(), upload.single('image'), update);
 
 /**
  * @swagger
@@ -107,7 +108,7 @@ router.put('/:id', verifyToken, requireAdmin, upload.single('image'), update);
  *       200:
  *         description: Deleted successfully
  */
-router.delete('/:id', verifyToken, requireAdmin, remove);
+router.delete('/:id', verifyToken, requireAdmin, validateObjectId(), remove);
 
 export default router;
 
