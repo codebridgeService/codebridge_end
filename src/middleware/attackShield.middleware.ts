@@ -22,8 +22,8 @@ const ipHistory = new Map<string, IPHistory>();
 
 export const DEFAULT_BAN_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const BURST_WINDOW_MS = 10 * 1000; // 10 seconds
-const MAX_BURST_REQUESTS = 60; // Max 60 requests per 10s per IP
-const MAX_FAILED_ATTEMPTS = 5; // 5 failed auth attempts = Auto-ban
+const MAX_BURST_REQUESTS = 120; // Max 120 requests per 10s per IP (prevents false positives on admin dashboard load)
+const MAX_FAILED_ATTEMPTS = 15; // 15 failed auth attempts = Auto-ban (leaves room for human typos before IP block)
 const FAILED_ATTEMPTS_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 export const normalizeIP = (rawIp?: string | string[]): string => {
@@ -43,8 +43,15 @@ export const normalizeIP = (rawIp?: string | string[]): string => {
 
 export const getClientIP = (req: Request): string => {
   const forwarded = req.headers['x-forwarded-for'];
-  const remote = req.socket?.remoteAddress;
-  return normalizeIP((forwarded as string) || remote || req.ip);
+  if (forwarded) {
+    const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    return normalizeIP(raw.split(',')[0]);
+  }
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) {
+    return normalizeIP(Array.isArray(realIp) ? realIp[0] : realIp);
+  }
+  return normalizeIP(req.ip || req.socket?.remoteAddress);
 };
 
 const logInfo = (...args: any[]) => {

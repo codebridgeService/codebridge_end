@@ -28,6 +28,9 @@ import { setupSwagger } from './lib/swagger';
 const app: Express = express();
 const port = process.env.PORT || 5000;
 
+// Trust reverse proxy (Render / Vercel / Cloudflare load balancers)
+app.set('trust proxy', 1);
+
 // Security HTTP headers
 app.use(helmet());
 
